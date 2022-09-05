@@ -20,5 +20,5 @@ class Classifier {
 
     double compute_loss(int cnt, double **data, unsigned int *labels);
 
-    double train_epoch(int cnt, double **data, unsigned int *labels, double lr);
+    double train_epoch(int cnt, double **data, unsigned int *labels, double lr, unsigned int batch_size);
 };

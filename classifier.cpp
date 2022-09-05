@@ -97,9 +97,11 @@ double Classifier::compute_loss(int cnt, double **data, unsigned int *labels) {
 }
 
 // train for one epoch
-double Classifier::train_epoch(int cnt, double **data, unsigned int *labels, double lr) {
+double Classifier::train_epoch(int cnt, double **data, unsigned int *labels, double lr, unsigned int batch_size) {
   // randomly shuffle training samples
   int index;
+  int num_batches;
+
   std::srand ( unsigned ( std::time(0) ) );
   int* order = new int[cnt];
   for (int i = 0; i < cnt; i++) {
@@ -107,28 +109,52 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels, dou
   }
   std::random_shuffle(order, order+cnt, myrandom);
 
-  for (int i = 0; i < cnt; i++) {
-    double* delta = new double[output_size];
-    unsigned int yj;
-    index = order[i];
+  num_batches = cnt / batch_size;
 
-    run(data[index]);
+  for (int b = 0; b < num_batches; b++) {
+    // partials of bias and weights, initialize to 0
+    double* d_bias = new double[output_size];
+    double* d_weight = new double[input_size*output_size];
+    for (int j = 0; j < output_size; j++) d_bias[j] = 0;
+    for (int j = 0; j < input_size*output_size; j++) d_weight[j] = 0;
 
-    // compute delta
+    // one batch at a time
+    for (int i = 0; i < batch_size; i++) {
+      double* delta = new double[output_size];
+      unsigned int yj;
+
+      // get net output
+      index = order[ b*batch_size + i ];
+      run(data[index]);
+
+      // compute delta and derivatives
+      for (int j = 0; j < output_size; j++) {
+        yj = (j == labels[index]);
+        delta[j] = output[j] - yj;
+
+        // update bias partials
+        d_bias[j] += delta[j];
+        // update weight partials
+        for (int k = 0; k < input_size; k++) {
+          d_weight[j*input_size + k] += delta[j] * data[index][k];
+        }
+      }
+      delete[] delta; 
+    }
+
+    // now that we have finished with batch, update the weights
     for (int j = 0; j < output_size; j++) {
-      yj = (j == labels[index]);
-      delta[j] = output[j] - yj;
-
       // update biases
-      L->bias[j] -= lr*delta[j];
+      L->bias[j] -= (lr/batch_size)*d_bias[j];
       // update weights
       for (int k = 0; k < input_size; k++) {
-        L->weight[j*input_size + k] -= lr*delta[j] * data[index][k];
+        L->weight[j*input_size + k] -= (lr/batch_size)*d_weight[j*input_size + k];
       }
-    } 
-
-    delete[] delta;
+    }
+    delete[] d_bias;
+    delete[] d_weight; 
   }
+
   delete[] order;
   return 0;
 }

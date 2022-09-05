@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   std::cout << C.compute_loss(cnt, data, labels) << " " << C.train_loss << std::endl;
 
   for (int i = 0; i < 3; i++) {
-    C.train_epoch(cnt, data, labels, 0.1);
+    C.train_epoch(cnt, data, labels, 0.1, 10);
     std::cout << C.compute_loss(cnt, data, labels) << " " << C.train_loss << std::endl;
   }
 
