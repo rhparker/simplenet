@@ -1,3 +1,9 @@
+// Classifier with input layer, output layer, and (optional) hidden layers
+// layers are fully connected
+// all but last layer use sigmoid activation function
+// last layer uses softmax to get probability vector
+// loss function is cross-entropy
+
 #include "layer.h"
 
 class Classifier {
@@ -36,6 +42,7 @@ class Classifier {
     // compute loss function (cross entropy) and accuracy
     double compute_loss(int cnt, double **data, unsigned int *labels);
 
-    // run one epoch of training using mini-batch stochastic gradient descent
+    // run one epoch of training with supplied data and labels 
+    // using mini-batch stochastic gradient descent
     double train_epoch(int cnt, double **data, unsigned int *labels, double lr, unsigned int batch_size);
 };

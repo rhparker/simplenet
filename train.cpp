@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
   std::cout << "epoch  accuracy  cross-entropy loss" << std::endl;
   std::cout << 0 << "    " << C.compute_loss(cnt, data, labels) << "    " << C.train_loss << std::endl;
 
-  int epochs = 4;
+  int epochs = 5;
   int batch_size = 10;
   double learning_rate = 0.1;
   for (int i = 1; i <= epochs; i++) {

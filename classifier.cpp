@@ -1,3 +1,5 @@
+// multi-layer classifier
+
 #include "classifier.h"
 
 #include <iostream>
@@ -12,7 +14,7 @@ int myrandom(int i) {
   return std::rand() % i;
 }
 
-// argmax
+// argmax function
 unsigned int argmax(int len, double* values) {
   double current_max;
   unsigned int current_arg = 0;
@@ -26,17 +28,20 @@ unsigned int argmax(int len, double* values) {
   return current_arg;
 }
 
-// sigmoid activation function
+// sigmoid activation function (single element)
 inline double sig(double x) {
   return 1.0/(1.0 + exp(-x));
 }
 
-// derivative of sigmoid
+// derivative of sigmoid (single element)
 inline double d_sig(double x) {
   return sig(x)*(1.0 - sig(x));
 }
 
 // sigmoid activation
+// data : input vector
+// size : size of input
+// out : output
 void sig_act(int size, double* data, double* out) {
   for (int i = 0; i < size; i++) {
     out[i] = sig(data[i]);
@@ -44,6 +49,9 @@ void sig_act(int size, double* data, double* out) {
 }
 
 // softmax operation
+// data : input vector
+// size : size of input
+// out : output
 void softmax(int size, double* data, double* out) {
   double normalizer = 0.0;
   for (int i = 0; i < size; i++) {
@@ -57,6 +65,9 @@ void softmax(int size, double* data, double* out) {
 }
 
 // constructor
+// num_l : number of layers
+// l_sizes: array of sizes of layers (including input and output)
+// sigma: weights initialized to Normal(0, sigma) (biases intialized to 0)
 Classifier::Classifier(int num_l, int* l_sizes, double sigma) {
   num_layers = num_l;
   input_size = l_sizes[0];
@@ -85,6 +96,7 @@ Classifier::~Classifier() {
   delete[] output;
 }
 
+// print properties of network
 void Classifier::properties() {
   std::cout << "Network properties" << std::endl;
   std::cout << "Input layer:  " << input_size << std::endl;
@@ -112,7 +124,7 @@ void Classifier::forward(double *input, double**z, double**a) {
   softmax(output_size, z[num_layers-1], a[num_layers-1]);
 }
 
-// generate output from input
+// generate and store output of network from input
 void Classifier::run(double *input) {
   // allocate pointers for layer data
   // raw layer output (z) and layer output after activation (a)
@@ -143,7 +155,7 @@ void Classifier::run(double *input) {
   delete[] a;
 }
 
-// print layer output
+// print stored network output
 void Classifier::print_output() {
   for (int i = 0; i < output_size; i++) {
     std::cout << output[i] << " ";
@@ -151,24 +163,34 @@ void Classifier::print_output() {
   std::cout << "\n";
 }
 
-// compute loss (cross-entropy) and training accuracy
+// compute loss (cross-entropy) and training accuracy from labeled data
 double Classifier::compute_loss(int cnt, double **data, unsigned int *labels) {
+  // running total of number correct
   double correct = 0;
   train_loss = 0;
+  // iterate over all samples
   for (int i = 0; i < cnt; i++) {
-
+    // evaluate network at current sample
     run(data[i]);
+    // increment number correct if classification output from network (argmax of probability vector)
+    // matches label
     if ( argmax(output_size, output) == labels[i] ) {
       correct += 1;
     }
-
+    // update cross-entropy with sample
     train_loss -= log( output[ labels[i] ] );
   }
+  // compute training accuracy
   train_accuracy = correct/cnt;
   return train_accuracy;
 }
 
 // run one epoch of training using mini-batch stochastic gradient descent
+// cnt:  number of data samples
+// data: array containing data
+// labels: labels corresponding to data
+// lr: learning rate
+// batch_size: size of each mini-batch
 double Classifier::train_epoch(int cnt, double **data, unsigned int *labels, 
                                   double lr, unsigned int batch_size) {
   int index;
@@ -183,10 +205,9 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
   }
   std::random_shuffle(order, order+cnt, myrandom);
 
-  // iterate over batches
+  // backpropagation: iterate over batches
   for (int b = 0; b < num_batches; b++) {
-    // partials of bias and weights for each layer
-    // index 0 is not used
+    // partials of bias and weights for each layer (index 0 is unused)
     double** d_bias   = new double*[num_layers];
     double** d_weight = new double*[num_layers];
     // for each layer, allocate memory for partials and initialize to 0
@@ -197,18 +218,19 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       for (int k = 0; k < L[j]->input_size*L[j]->output_size; k++) d_weight[j][k] = 0;
     }
 
-    // backpropagation one batch at a time
+    // compute contributions to paritals from each training sample in batch
     for (int i = 0; i < batch_size; i++) {
-      // will store label
+      // variable to store label for current sample
       unsigned int yj;
-      // which index to use
+      // index of training sample in data array
       index = order[ b*batch_size + i ];
 
+      // step 1: run forward propagation on training sample
       // allocate pointers for layer data
       // need raw layer output (z) and layer output after activation (a)
       double** z = new double*[num_layers];
       double** a = new double*[num_layers];
-      // first layer is input layer
+      // first layer is input layer, so set pointer to current sample
       a[0] = data[index];
       z[0] = data[index];
       // allocate memory for intermediate layers
@@ -219,7 +241,8 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       // run forward propagation, fills z and a
       forward(data[index], z, a);
 
-      // compute delta (do not need delta[0])
+      // step 2: compute delta, partial derivative of loss with respect to
+      // raw layer output z (delta[0] is unused)
       double** delta = new double*[num_layers];
       for (int j = 1; j < num_layers; j++) {
         delta[j] = new double[ L[j]->output_size ];
@@ -242,7 +265,7 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
         }
       }
 
-      // using the deltas, update bias and weight partials, one layer at a time
+      // step 3: using the deltas, update bias and weight partials, one layer at a time
       for (int l = 1; l < num_layers; l++) {
         for (int j = 0; j < L[l]->output_size; j++) {
           d_bias[l][j] += delta[l][j];
@@ -263,7 +286,8 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       delete[] delta;
     }
 
-    // now that we have finished with our batch, update the weights, one layer at a time
+    // step 4: now that we have finished with our batch, update the weights
+    // using partial derivatives for entire mini-batch, one layer at a time
     for (int l = 1; l < num_layers; l++) {
       for (int j = 0; j < L[l]->output_size; j++) {
         // update biases
