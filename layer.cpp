@@ -12,7 +12,6 @@ Layer::Layer(int in_size, int out_size, double sigma) {
   // allocate memory for weights, biases, and output
   weight = new double[input_size*output_size];
   bias = new double[output_size];
-  output = new double[output_size];
 
   // random device initialization
   std::random_device rd; 
@@ -25,10 +24,9 @@ Layer::Layer(int in_size, int out_size, double sigma) {
     weight[i] = d(gen);
   }
 
-  // initialize biases and outputs to 0
+  // initialize biases to 0
   for (int i = 0; i < output_size; i++) {
     bias[i] = 0; 
-    output[i] = 0;
   }
 }
 
@@ -51,12 +49,12 @@ void Layer::print_weights() {
     for (int j = 0; j < input_size; j++) {
       std::cout << get_weight(i,j) << " ";
     }
-    std::cout << std::endl;
+    std::cout << std::endl << std::endl;
   }
 }
 
 // generate output from input
-void Layer::run_layer(double *input) {
+void Layer::run_layer(double *input, double *output) {
   // iterate over rows
   for (int i = 0; i < output_size; i++) {
     output[i] = bias[i];
@@ -65,13 +63,5 @@ void Layer::run_layer(double *input) {
       output[i] += weight[i*input_size + j] * input[j];
     }
   }
-}
-
-// print layer output
-void Layer::print_output() {
-  for (int i = 0; i < output_size; i++) {
-    std::cout << output[i] << " ";
-  }
-  std::cout << std::endl;
 }
 

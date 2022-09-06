@@ -1,3 +1,6 @@
+// fully connected linear layer
+// with weight matrix and biases
+
 class Layer {
   public:
     // number of inputs and outputs
@@ -6,20 +9,17 @@ class Layer {
     // weights and biases
     double *weight;
     double *bias;
-    // output of layer
-    double *output;
 
     // constructor and destructor
     Layer(int in_size, int out_size, double sigma);
     ~Layer(); 
 
     // get weight as specific position in weight matrix
-    // needed since weight matrix flattened into 1D array
+    // (weight matrix is flattened into 1D array)
     double get_weight(int i, int j);
     // print weight matrix
     void print_weights();
 
-    // run layer
-    void run_layer(double* input);
-    void print_output();
+    // run layer (store output in the input variable)
+    void run_layer(double* input, double* output);
 };
