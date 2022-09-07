@@ -3,7 +3,8 @@
 
 /*
  * MNIST loader by Nuri Park - https://github.com/projectgalateia/mnist
- */
+ * modified to return images as a single array
+*/
 
 #ifdef USE_MNIST_LOADER /* Fundamental macro to make the code active */
 

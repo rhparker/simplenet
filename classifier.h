@@ -32,17 +32,17 @@ class Classifier {
     void properties();
 
     // forward propagation on input, generates output from all layers
-    void forward(double *input, double** z, double** a);
+    void forward(double* input, double** z, double** a);
     // runs net on input
-    void run(double *input);
+    void run(double* input);
 
     // print output of network
     void print_output();
 
     // compute loss function (cross entropy) and accuracy
-    double compute_loss(int cnt, double **data, unsigned int *labels);
+    double compute_loss(int cnt, double** data, unsigned int* labels);
 
     // run one epoch of training with supplied data and labels 
     // using mini-batch stochastic gradient descent
-    double train_epoch(int cnt, double **data, unsigned int *labels, double lr, unsigned int batch_size);
+    double train_epoch(int cnt, double** data, unsigned int* labels, double lr, unsigned int batch_size);
 };

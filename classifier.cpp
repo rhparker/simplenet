@@ -111,7 +111,7 @@ void Classifier::properties() {
 // runs classifier on input
 // outputs are: raw layer output (z) and layer output after activation (a)
 // activation is sigmoid for all but last layer, softmax for last layer
-void Classifier::forward(double *input, double**z, double**a) {
+void Classifier::forward(double* input, double** , double** a) {
   // process all but last layer
   for (int i = 1; i < num_layers-1; i++) {
     L[i]->run_layer(a[i-1], z[i]);
@@ -125,7 +125,7 @@ void Classifier::forward(double *input, double**z, double**a) {
 }
 
 // generate and store output of network from input
-void Classifier::run(double *input) {
+void Classifier::run(double* input) {
   // allocate pointers for layer data
   // raw layer output (z) and layer output after activation (a)
   double** z = new double*[num_layers];
@@ -164,7 +164,10 @@ void Classifier::print_output() {
 }
 
 // compute loss (cross-entropy) and training accuracy from labeled data
-double Classifier::compute_loss(int cnt, double **data, unsigned int *labels) {
+// cnt : number of samples
+// data : data array
+// labels : corresponding labels
+double Classifier::compute_loss(int cnt, double** data, unsigned int* labels) {
   // running total of number correct
   double correct = 0;
   train_loss = 0;
@@ -191,7 +194,7 @@ double Classifier::compute_loss(int cnt, double **data, unsigned int *labels) {
 // labels: labels corresponding to data
 // lr: learning rate
 // batch_size: size of each mini-batch
-double Classifier::train_epoch(int cnt, double **data, unsigned int *labels, 
+double Classifier::train_epoch(int cnt, double** data, unsigned int* labels, 
                                   double lr, unsigned int batch_size) {
   int index;
   int num_batches;
@@ -225,7 +228,7 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       // index of training sample in data array
       index = order[ b*batch_size + i ];
 
-      // step 1: run forward propagation on training sample
+      // step 1: forward propagation on training sample
       // allocate pointers for layer data
       // need raw layer output (z) and layer output after activation (a)
       double** z = new double*[num_layers];
@@ -241,7 +244,7 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       // run forward propagation, fills z and a
       forward(data[index], z, a);
 
-      // step 2: compute delta, partial derivative of loss with respect to
+      // step 2: compute delta. delta is partial derivative of loss with respect to
       // raw layer output z (delta[0] is unused)
       double** delta = new double*[num_layers];
       for (int j = 1; j < num_layers; j++) {
@@ -249,12 +252,13 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
       }
       
       // do last delta first, since that one is different
+      // due to softmax activation function in last layer
       for (int j = 0; j < output_size; j++) {
         yj = (j == labels[index]);
         delta[num_layers-1][j] = a[num_layers-1][j] - yj;
       }
 
-      // then iteratively compute remaining deltas, working backwards
+      // iteratively compute remaining deltas, working backwards
       for (int l = num_layers - 2; l > 0; l--) {
         for (int j = 0; j < L[l]->output_size; j++) {
           delta[l][j] = 0;
@@ -299,6 +303,7 @@ double Classifier::train_epoch(int cnt, double **data, unsigned int *labels,
         }
       }
     }
+
     // delete partial derivative d_bias and d_weight
     for (int j = 1; j < num_layers; j++) {
       delete[] d_bias[j];

@@ -6,6 +6,7 @@
 
 // constructor
 Layer::Layer(int in_size, int out_size, double sigma) {
+  // number of inputs and outputs
   input_size  = in_size;
   output_size = out_size;
 
@@ -36,7 +37,8 @@ Layer::~Layer(void) {
   delete[] bias; 
 }
 
-// get weight at specific position
+// get weight at specific position (i,j) in weight matrix
+// weight matrix stored as flattened array
 double Layer::get_weight(int i, int j) {
     return weight[i*input_size + j];
 }
@@ -53,8 +55,8 @@ void Layer::print_weights() {
   }
 }
 
-// generate output from input
-void Layer::run_layer(double *input, double *output) {
+// generate output from input: z = W x + b
+void Layer::run_layer(double* input, double* output) {
   // iterate over rows
   for (int i = 0; i < output_size; i++) {
     output[i] = bias[i];
