@@ -42,7 +42,7 @@ inline double d_sig(double x) {
 // data : input vector
 // size : size of input
 // out : output
-void sig_act(int size, double* data, double* out) {
+void sig_act(int size, double* &data, double* &out) {
   for (int i = 0; i < size; i++) {
     out[i] = sig(data[i]);
   }
@@ -52,7 +52,7 @@ void sig_act(int size, double* data, double* out) {
 // data : input vector
 // size : size of input
 // out : output
-void softmax(int size, double* data, double* out) {
+void softmax(int size, double* &data, double* &out) {
   double normalizer = 0.0;
   for (int i = 0; i < size; i++) {
     out[i] = exp(data[i]);
@@ -94,6 +94,7 @@ Classifier::Classifier(int num_l, int* l_sizes, double sigma) {
 Classifier::~Classifier() {
   delete L;
   delete[] output;
+  delete[] layer_sizes;
 }
 
 // print properties of network
@@ -111,7 +112,7 @@ void Classifier::properties() {
 // runs classifier on input
 // outputs are: raw layer output (z) and layer output after activation (a)
 // activation is sigmoid for all but last layer, softmax for last layer
-void Classifier::forward(double* input, double** , double** a) {
+void Classifier::forward(double** &z, double** &a) {
   // process all but last layer
   for (int i = 1; i < num_layers-1; i++) {
     L[i]->run_layer(a[i-1], z[i]);
@@ -125,9 +126,10 @@ void Classifier::forward(double* input, double** , double** a) {
 }
 
 // generate and store output of network from input
-void Classifier::run(double* input) {
+void Classifier::run(double* &input) {
   // allocate pointers for layer data
   // raw layer output (z) and layer output after activation (a)
+
   double** z = new double*[num_layers];
   double** a = new double*[num_layers];
   // first layer is input layer
@@ -140,7 +142,7 @@ void Classifier::run(double* input) {
   }
 
   // run forward propagation
-  forward(input, z, a);
+  forward(z, a);
   // copy output from forward propagation to output variable
   for (int i = 0; i < output_size; i++) {
     output[i] = a[num_layers-1][i];
@@ -167,7 +169,7 @@ void Classifier::print_output() {
 // cnt : number of samples
 // data : data array
 // labels : corresponding labels
-double Classifier::compute_loss(int cnt, double** data, unsigned int* labels) {
+double Classifier::compute_loss(int cnt, double** &data, unsigned int* &labels) {
   // running total of number correct
   double correct = 0;
   train_loss = 0;
@@ -194,7 +196,7 @@ double Classifier::compute_loss(int cnt, double** data, unsigned int* labels) {
 // labels: labels corresponding to data
 // lr: learning rate
 // batch_size: size of each mini-batch
-double Classifier::train_epoch(int cnt, double** data, unsigned int* labels, 
+double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels, 
                                   double lr, unsigned int batch_size) {
   int index;
   int num_batches;
@@ -242,7 +244,7 @@ double Classifier::train_epoch(int cnt, double** data, unsigned int* labels,
         z[j] = new double[ L[j]->output_size ];
       }
       // run forward propagation, fills z and a
-      forward(data[index], z, a);
+      forward(z, a);
 
       // step 2: compute delta. delta is partial derivative of loss with respect to
       // raw layer output z (delta[0] is unused)

@@ -13,12 +13,15 @@ CFLAGS   = -O2
 FFLAGS   = -O2
 
 # makefile targets
-all : train
+all : train-mnist train-fashion
 
-train : train.cpp
-	$(CXX) $(CXXFLAGS) train.cpp layer.cpp classifier.cpp -o $@
+train-mnist : train-mnist.cpp
+	$(CXX) $(CXXFLAGS) train-mnist.cpp loadmnist.cpp layer.cpp classifier.cpp -o $@
+
+train-fashion : train-fashion.cpp
+	$(CXX) $(CXXFLAGS) train-fashion.cpp layer.cpp classifier.cpp -o $@
 
 clean :
-	\rm -f *.o *.out train
+	\rm -f *.o *.out train-mnist
 
 ####### End of Makefile #######
