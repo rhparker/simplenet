@@ -114,6 +114,12 @@ unsigned int mnist_load(
 		ret = fread(tmp, 1, 1, lfp);
 		labels[i] = tmp[0];
 	}
+
+	// close files
+	if (ifp) fclose(ifp);
+	if (lfp) fclose(lfp);
+
+	// return number of images loaded
 	return image_cnt;
 }
 

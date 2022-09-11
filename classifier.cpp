@@ -92,9 +92,13 @@ Classifier::Classifier(int num_l, int* l_sizes, double sigma) {
 
 // destructor
 Classifier::~Classifier() {
-  delete L;
+  // delete L;
   delete[] output;
   delete[] layer_sizes;
+  for (int i = 0; i < num_layers; i++) {
+    delete L[i];
+  }
+  delete[] L;
 }
 
 // print properties of network
