@@ -34,13 +34,18 @@ int main(int argc, char* argv[]) {
   // initialize network
   // 
 
-  // no hidden layers
-  int layer_sizes[2] = {input_size,output_size};
-  Classifier C(2,layer_sizes,0.1);
+  // learning rate
+  double sigma = 0.1;
 
-  // // one hidden layer
-  // int layer_sizes[3] = {input_size,64,output_size};
-  // Classifier C(3,layer_sizes,0.1);
+  // // no hidden layers
+  // int layer_sizes[2] = {input_size,output_size};
+  // double drop_probs[1] = {0};
+  // Classifier C(2,layer_sizes,sigma,drop_probs);
+
+  // one hidden layer
+  int layer_sizes[3] = {input_size,64,output_size};
+  double drop_probs[2] = {0, 0};
+  Classifier C(3,layer_sizes,sigma,drop_probs);
 
   // print network properties
   C.properties();
@@ -54,7 +59,7 @@ int main(int argc, char* argv[]) {
   std::cout << "epoch  accuracy  cross-entropy loss" << std::endl;
   std::cout << 0 << "    " << C.compute_loss(cnt, data, labels) << "    " << C.train_loss << std::endl;
 
-  int epochs = 2;
+  int epochs = 4;
   int batch_size = 10;
   double learning_rate = 0.1;
   for (int i = 1; i <= epochs; i++) {

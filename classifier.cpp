@@ -7,14 +7,19 @@
 #include <algorithm>    
 #include <vector>
 #include <ctime> 
+#include <random>
 #include <cstdlib>
+
+// macro for getting index of 2D array stored as 1D flattened array
+#define ind(i,j,rows) i*rows + j 
 
 // random number generator
 int myrandom(int i) { 
   return std::rand() % i;
 }
 
-// argmax function
+// argmax function 
+// returns argmax of values, which has length len
 unsigned int argmax(int len, double* values) {
   double current_max;
   unsigned int current_arg = 0;
@@ -48,6 +53,18 @@ void sig_act(int size, double* &data, double* &out) {
   }
 }
 
+// sigmoid activation with drouput
+// data : input vector
+// size : size of input
+// out : output
+// dropout : dropout mask
+// drop_prob : dropout probability
+void sig_act_dropout(int size, double* &data, double* &out, char* &dropout, double drop_prob) {
+  for (int i = 0; i < size; i++) {
+    out[i] = sig(data[i]) * dropout[i] / (1.0 - drop_prob);
+  }
+}
+
 // softmax operation
 // data : input vector
 // size : size of input
@@ -68,7 +85,7 @@ void softmax(int size, double* &data, double* &out) {
 // num_l : number of layers
 // l_sizes: array of sizes of layers (including input and output)
 // sigma: weights initialized to Normal(0, sigma) (biases intialized to 0)
-Classifier::Classifier(int num_l, int* l_sizes, double sigma) {
+Classifier::Classifier(int num_l, int* l_sizes, double sigma, double* drop_probs) {
   num_layers = num_l;
   input_size = l_sizes[0];
   output_size = l_sizes[num_layers-1];
@@ -81,7 +98,7 @@ Classifier::Classifier(int num_l, int* l_sizes, double sigma) {
   // one fewer needed than num_layers, so L[0] is not used
   L = new Layer*[num_layers];
   for (int i=1; i < num_layers; i++) {
-    L[i] = new Layer(layer_sizes[i-1],layer_sizes[i], sigma);
+    L[i] = new Layer(layer_sizes[i-1],layer_sizes[i], sigma, drop_probs[i-1]);
   }
   // initialize output to all 0s
   output = new double[output_size];
@@ -95,7 +112,7 @@ Classifier::~Classifier() {
   // delete L;
   delete[] output;
   delete[] layer_sizes;
-  for (int i = 0; i < num_layers; i++) {
+  for (int i = 1; i < num_layers; i++) {
     delete L[i];
   }
   delete[] L;
@@ -122,6 +139,20 @@ void Classifier::forward(double** &z, double** &a) {
     L[i]->run_layer(a[i-1], z[i]);
     // intermediate layers get sigmoid activation function
     sig_act(layer_sizes[i], z[i], a[i]);
+  }
+  // output layer
+  L[num_layers-1]->run_layer(a[num_layers-2], z[num_layers-1]);
+  // output layer gets softmax activation
+  softmax(output_size, z[num_layers-1], a[num_layers-1]);
+}
+
+// forward propagation with dropout
+void Classifier::forward_dropout(double** &z, double** &a,  char** &dropout) {
+  // process all but last layer
+  for (int i = 1; i < num_layers-1; i++) {
+    L[i]->run_layer(a[i-1], z[i]);
+    // intermediate layers get sigmoid activation function
+    sig_act_dropout(layer_sizes[i], z[i], a[i], dropout[i], L[i]->drop_prob);
   }
   // output layer
   L[num_layers-1]->run_layer(a[num_layers-2], z[num_layers-1]);
@@ -214,6 +245,11 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
   }
   std::random_shuffle(order, order+cnt, myrandom);
 
+  // uniform[0,1]
+  std::random_device rd; 
+  std::mt19937 gen(rd()); 
+  std::uniform_real_distribution<double> d(0.0,1.0);
+
   // backpropagation: iterate over batches
   for (int b = 0; b < num_batches; b++) {
     // partials of bias and weights for each layer (index 0 is unused)
@@ -234,7 +270,6 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
       // index of training sample in data array
       index = order[ b*batch_size + i ];
 
-      // step 1: forward propagation on training sample
       // allocate pointers for layer data
       // need raw layer output (z) and layer output after activation (a)
       double** z = new double*[num_layers];
@@ -247,14 +282,28 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
         a[j] = new double[ L[j]->output_size ];
         z[j] = new double[ L[j]->output_size ];
       }
-      // run forward propagation, fills z and a
-      forward(z, a);
+      // arrays for dropout, do not need for final layer (softmax)
+      char** dropout = new char*[num_layers];
+      for (int j = 1; j < num_layers-1; j++) {
+        dropout[j] = new char[ L[j]->output_size ];
+        for (int k = 0; k < L[j]->output_size; k++) {
+          dropout[j][k] = ( d(gen) > 0.4 ) ? 1 : 0; 
+        }
+      }
 
-      // step 2: compute delta. delta is partial derivative of loss with respect to
+      // step 1: forward propagation on training sample
+      // fills z and a
+      forward_dropout(z, a, dropout);
+
+      // step 2: compute delta, partial derivative of loss with respect to
       // raw layer output z (delta[0] is unused)
+      // allocate memory for delta and initialize to 0
       double** delta = new double*[num_layers];
-      for (int j = 1; j < num_layers; j++) {
-        delta[j] = new double[ L[j]->output_size ];
+      for (int l = 1; l < num_layers; l++) {
+        delta[l] = new double[ L[l]->output_size ];
+        for (int j = 0; j < L[l]->output_size; j++) {
+          delta[l][j] = 0;
+        }
       }
       
       // do last delta first, since that one is different
@@ -266,12 +315,16 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
 
       // iteratively compute remaining deltas, working backwards
       for (int l = num_layers - 2; l > 0; l--) {
-        for (int j = 0; j < L[l]->output_size; j++) {
-          delta[l][j] = 0;
-          for (int k = 0; k < L[l+1]->output_size; k++) {
-            delta[l][j] += delta[l+1][k] * L[l+1]->weight[k*L[l+1]->input_size + j];
+        // here we have to multiply by the transpose of the weight matrix
+        // doing the loops this way (in theory) results in faster memory usage
+        for (int k = 0; k < L[l+1]->output_size; k++) {
+          for (int j = 0; j < L[l]->output_size; j++) {
+            delta[l][j] += delta[l+1][k] * L[l+1]->weight[ ind(k,j,L[l+1]->input_size) ];
           }
-          delta[l][j] *= d_sig( z[l][j] );
+        }
+        for (int j = 0; j < L[l]->output_size; j++) {
+          // for derivative, also need to account for dropout
+          delta[l][j] *= d_sig( z[l][j] ) * dropout[l][j] / (1 - L[l]->drop_prob);
         }
       }
 
@@ -280,7 +333,7 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
         for (int j = 0; j < L[l]->output_size; j++) {
           d_bias[l][j] += delta[l][j];
           for (int k = 0; k < L[l]->input_size; k++) {
-            d_weight[l][j*L[l]->input_size + k] += delta[l][j] * a[l-1][k];
+            d_weight[l][ ind(j,k,L[l]->input_size) ] += delta[l][j] * a[l-1][k];
           }
         }
       }
@@ -304,8 +357,8 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
         L[l]->bias[j] -= (lr/batch_size)*d_bias[l][j];
         // update weights
         for (int k = 0; k < L[l]->input_size; k++) {
-          L[l]->weight[j*L[l]->input_size + k] -= 
-            (lr/batch_size)*d_weight[l][j*L[l]->input_size + k];
+          L[l]->weight[ ind(j,k,L[l]->input_size) ] -= 
+            (lr/batch_size)*d_weight[l][ ind(j,k,L[l]->input_size) ];
         }
       }
     }

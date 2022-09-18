@@ -25,7 +25,7 @@ class Classifier {
     double train_loss;
 
     // constructor and destructor
-    Classifier(int num_l, int* l_sizes, double sigma);
+    Classifier(int num_l, int* l_sizes, double sigma, double* drop_probs);
     ~Classifier(); 
 
     // print properties
@@ -33,6 +33,9 @@ class Classifier {
 
     // forward propagation on input, generates output from all layers
     void forward(double** &z, double** &a);
+    // forward propagation with dropout
+    void forward_dropout(double** &z, double** &a, char** &dropout);
+
     // runs net on input
     void run(double* &input);
 
