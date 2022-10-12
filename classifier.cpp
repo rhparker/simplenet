@@ -222,6 +222,13 @@ double Classifier::compute_loss(int cnt, double** &data, unsigned int* &labels) 
   }
   // compute training accuracy
   train_accuracy = correct/cnt;
+  // compute squared L2 norm of weights
+  weight_L2sq = 0;
+  for (int i = 1; i < num_layers; i++) {
+    for (int j = 0; j < L[i]->input_size*L[i]->output_size; j++) {
+      weight_L2sq += L[i]->weight[j]*L[i]->weight[j];
+    }
+  }
   return train_accuracy;
 }
 
@@ -230,9 +237,10 @@ double Classifier::compute_loss(int cnt, double** &data, unsigned int* &labels) 
 // data: array containing data
 // labels: labels corresponding to data
 // lr: learning rate
+// wd: weight decay parameter
 // batch_size: size of each mini-batch
 double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels, 
-                                  double lr, unsigned int batch_size) {
+                                  double lr, double wd, unsigned int batch_size) {
   int index;
   int num_batches;
   num_batches = cnt / batch_size;
@@ -349,9 +357,14 @@ double Classifier::train_epoch(int cnt, double** &data, unsigned int* &labels,
       delete[] delta;
     }
 
-    // step 4: now that we have finished with our batch, update the weights
+    // step 4: now that we have finished with our mini-batch, update the weights
     // using partial derivatives for entire mini-batch, one layer at a time
     for (int l = 1; l < num_layers; l++) {
+      // weight decay on all weights
+      for (int j = 0; j < L[l]->input_size*L[l]->output_size; j++) {
+        L[l]->weight[j] *= (1.0 - lr*wd/batch_size);
+      }
+      // stochastic gradient descent on minibatch
       for (int j = 0; j < L[l]->output_size; j++) {
         // update biases
         L[l]->bias[j] -= (lr/batch_size)*d_bias[l][j];

@@ -34,16 +34,20 @@ int main(int argc, char* argv[]) {
   // initialize network
   // 
 
-  // learning rate
+  // std dev for weight initialization
   double sigma = 0.1;
 
-  // // no hidden layers
+  // timers
+  double batch_time;
+  double loss_time;
+
+  // no hidden layers
   // int layer_sizes[2] = {input_size,output_size};
   // double drop_probs[1] = {0};
   // Classifier C(2,layer_sizes,sigma,drop_probs);
 
   // one hidden layer
-  int layer_sizes[3] = {input_size,64,output_size};
+  int layer_sizes[3] = {input_size,128,output_size};
   double drop_probs[2] = {0, 0};
   Classifier C(3,layer_sizes,sigma,drop_probs);
 
@@ -56,15 +60,23 @@ int main(int argc, char* argv[]) {
 
   // initial accuracy and cross entropy (pre-training)
   std::cout << "TRAINING" << std::endl;
-  std::cout << "epoch  accuracy  cross-entropy loss" << std::endl;
-  std::cout << 0 << "    " << C.compute_loss(cnt, data, labels) << "    " << C.train_loss << std::endl;
+  std::cout 
+    << "epoch  accuracy  cross-entropy loss       squared L2 norm of weights      batch time      loss_time" 
+    << std::endl;
+  loss_time = C.compute_loss(cnt, data, labels);
+  std::cout << 0 << "    " << C.train_accuracy
+    << "    " << C.train_loss << "   " << C.weight_L2sq << std::endl;
 
   int epochs = 4;
   int batch_size = 10;
   double learning_rate = 0.1;
+  double weight_decay = 0;
   for (int i = 1; i <= epochs; i++) {
-    C.train_epoch(cnt, data, labels, learning_rate, batch_size);
-    std::cout << i << "    " << C.compute_loss(cnt, data, labels) << "   " << C.train_loss << std::endl;
+    batch_time = C.train_epoch(cnt, data, labels, learning_rate, weight_decay, batch_size);
+    loss_time = C.compute_loss(cnt, data, labels);
+    std::cout << i << "      " << C.train_accuracy
+      << "   " << C.train_loss << "   " << C.weight_L2sq 
+      << "   " << batch_time << "   " << loss_time << std::endl;
   }
 
   // unallocate training data
@@ -89,7 +101,8 @@ int main(int argc, char* argv[]) {
   }
 
   // compute and print loss/accuracy
-  std::cout << "accuracy: " << C.compute_loss(cnt, data, labels) << std::endl << std::endl;
+  loss_time = C.compute_loss(cnt, data, labels);
+  std::cout << "accuracy: " << C.train_accuracy << std::endl << std::endl;
 
   // unallocate test data
   for (int i = 0; i < cnt; i++) {

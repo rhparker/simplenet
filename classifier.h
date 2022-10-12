@@ -17,12 +17,14 @@ class Classifier {
     // layers
     Layer** L;
 
-    // stores output of net
+    // current output
     double* output;
 
-    // stores current training accuracy and cross-entropy loss
+    // stores current training accuracy, cross-entropy loss
     double train_accuracy;
     double train_loss;
+    // stores squared L2 norm of weights
+    double weight_L2sq;
 
     // constructor and destructor
     Classifier(int num_l, int* l_sizes, double sigma, double* drop_probs);
@@ -47,5 +49,5 @@ class Classifier {
 
     // run one epoch of training with supplied data and labels 
     // using mini-batch stochastic gradient descent
-    double train_epoch(int cnt, double** &data, unsigned int* &labels, double lr, unsigned int batch_size);
+    double train_epoch(int cnt, double** &data, unsigned int* &labels, double lr, double wd, unsigned int batch_size);
 };
